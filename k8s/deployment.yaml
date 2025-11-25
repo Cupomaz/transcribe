@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
       - name: whisper-transcribe
-        image: ghcr.io/YOUR_USERNAME/whisper-transcribe:latest
+        image: ghcr.io/cupomaz/transcribe:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 5000

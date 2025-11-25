@@ -55,12 +55,15 @@ def upload_file():
         # Send file to Whisper server
         whisper_url = f'http://{WHISPER_SERVER}:{WHISPER_PORT}/inference'
         
+        # Detect audio format from file extension
+        audio_format = filename.rsplit('.', 1)[1].lower() if '.' in filename else 'wav'
+        
         with open(filepath, 'rb') as audio_file:
-            files = {'file': (filename, audio_file, 'audio/wav')}
+            files = {'file': (filename, audio_file)}
             data = {
-                'temperature': '0.0',
-                'temperature_inc': '0.2',
-                'response_format': 'json'
+                'temperature': '0.2',
+                'response-format': 'json',
+                'audio_format': audio_format
             }
             
             response = requests.post(whisper_url, files=files, data=data, timeout=300)
