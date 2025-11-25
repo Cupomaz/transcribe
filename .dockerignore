@@ -1,0 +1,16 @@
+.git/
+.github/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+*.log
+.DS_Store
+README.md
+.gitignore
+.env
+.env.example
+k8s/

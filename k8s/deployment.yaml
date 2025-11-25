@@ -1,0 +1,133 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: whisper-transcribe-config
+  namespace: default
+data:
+  WHISPER_SERVER: "whisper-server"
+  WHISPER_PORT: "8080"
+  UPLOAD_FOLDER: "/tmp/uploads"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whisper-transcribe
+  namespace: default
+  labels:
+    app: whisper-transcribe
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: whisper-transcribe
+  template:
+    metadata:
+      labels:
+        app: whisper-transcribe
+    spec:
+      containers:
+      - name: whisper-transcribe
+        image: ghcr.io/YOUR_USERNAME/whisper-transcribe:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+          name: http
+          protocol: TCP
+        env:
+        - name: WHISPER_SERVER
+          valueFrom:
+            configMapKeyRef:
+              name: whisper-transcribe-config
+              key: WHISPER_SERVER
+        - name: WHISPER_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: whisper-transcribe-config
+              key: WHISPER_PORT
+        - name: UPLOAD_FOLDER
+          valueFrom:
+            configMapKeyRef:
+              name: whisper-transcribe-config
+              key: UPLOAD_FOLDER
+        - name: PORT
+          value: "5000"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        volumeMounts:
+        - name: tmp-uploads
+          mountPath: /tmp/uploads
+      volumes:
+      - name: tmp-uploads
+        emptyDir:
+          sizeLimit: 1Gi
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: whisper-transcribe
+  namespace: default
+  labels:
+    app: whisper-transcribe
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 5000
+    protocol: TCP
+    name: http
+  selector:
+    app: whisper-transcribe
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: whisper-transcribe
+  namespace: default
+  annotations:
+    # Uncomment and configure based on your ingress controller
+    # nginx.ingress.kubernetes.io/rewrite-target: /
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: transcribe.example.com  # Change this to your domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: whisper-transcribe
+            port:
+              number: 80
+  # Uncomment for TLS/HTTPS
+  # tls:
+  # - hosts:
+  #   - transcribe.example.com
+  #   secretName: whisper-transcribe-tls
